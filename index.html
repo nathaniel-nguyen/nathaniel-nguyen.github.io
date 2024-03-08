@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
     <title>House Prices Over Time</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
-        .line {{
+        .line {
             fill: none;
             stroke: steelblue;
             stroke-width: 2;
-        }}
-        .tooltip {{
+        }
+        .tooltip {
             position: absolute;
             text-align: center;
-            width: 100px;
+            width: auto;
             height: auto;
             padding: 2px;
             font: 12px sans-serif;
@@ -21,74 +22,100 @@
             border-radius: 8px;
             pointer-events: none;
             opacity: 0;
-        }}
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: grey;
+            stroke-width: 1;
+            shape-rendering: crispEdges;
+        }
+        .axis text {
+            font-family: sans-serif;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <svg width="960" height="500"></svg>
     <div class="tooltip"></div>
     <script>
-        const data = {data_json};
+        const svg = d3.select("svg"),
+            margin = {top: 20, right: 20, bottom: 30, left: 50},
+            width = +svg.attr("width") - margin.left - margin.right,
+            height = +svg.attr("height") - margin.top - margin.bottom,
+            g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        const margin = {{top: 20, right: 20, bottom: 30, left: 50}},
-            width = 960 - margin.left - margin.right,
-            height = 500 - margin.top - margin.bottom;
-
-        const svg = d3.select("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        const x = d3.scaleTime()
-            .domain(d3.extent(data, d => d3.timeParse("%Y-%m")(d.year_month)))
-            .range([0, width]);
-
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(data, d => d.price)])
-            .range([height, 0]);
-
-        const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%Y-%m"));
-        const yAxis = d3.axisLeft(y);
-
-        svg.append("g")
-            .attr("transform", "translate(0," + height + ")")
-            .call(xAxis);
-
-        svg.append("g")
-            .call(yAxis);
+        const x = d3.scaleTime().rangeRound([0, width]);
+        const y = d3.scaleLinear().rangeRound([height, 0]);
 
         const line = d3.line()
-            .x(d => x(d3.timeParse("%Y-%m")(d.year_month)))
-            .y(d => y(d.price));
+            .x(function(d) { return x(d.date); })
+            .y(function(d) { return y(d.price); });
 
-        svg.append("path")
-            .datum(data)
-            .attr("class", "line")
-            .attr("d", line);
-
-        // Tooltip
         const tooltip = d3.select(".tooltip");
 
-        svg.selectAll("dot")
-            .data(data)
-          .enter().append("circle")
-            .attr("r", 5)
-            .attr("cx", d => x(d3.timeParse("%Y-%m")(d.year_month)))
-            .attr("cy", d => y(d.price))
-            .on("mouseover", (event, d) => {{
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(d.year_month + "<br/>" + "$" + d.price.toFixed(2))
-                    .style("left", (event.pageX) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            }})
-            .on("mouseout", d => {{
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            }});
+        d3.csv("zillow_data_chapel_hill.csv").then(function(data) {
+            data.forEach(function(d) {
+                d.dateSold = new Date(d.dateSold);
+                d.price = +d.price;
+            });
+
+            var dataGroup = d3.group(data, d => d.dateSold.getFullYear() + "-" + (d.dateSold.getMonth() + 1).toString().padStart(2, '0'));
+            var averagePrices = Array.from(dataGroup, ([key, value]) => {
+                return {date: d3.timeParse("%Y-%m")(key), price: d3.mean(value, d => d.price)};
+            });
+
+            x.domain(d3.extent(averagePrices, function(d) { return d.date; }));
+            y.domain([0, d3.max(averagePrices, function(d) { return d.price; })]);
+
+            g.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x))
+                .select(".domain")
+                .remove();
+
+            g.append("g")
+                .call(d3.axisLeft(y))
+                .append("text")
+                .attr("fill", "#000")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 6)
+                .attr("dy", "0.71em")
+                .attr("text-anchor", "end")
+                .text("Price ($)");
+
+            g.append("path")
+                .datum(averagePrices)
+                .attr("fill", "none")
+                .attr("stroke", "steelblue")
+                .attr("stroke-linejoin", "round")
+                .attr("stroke-linecap", "round")
+                .attr("stroke-width", 1.5)
+                .attr("d", line);
+
+            // Tooltip
+            g.selectAll(".dot")
+                .data(averagePrices)
+                .enter().append("circle") // Uses the enter().append() method
+                .attr("class", "dot") // Assign a class for styling
+                .attr("cx", function(d) { return x(d.date) })
+                .attr("cy", function(d) { return y(d.price) })
+                .attr("r", 5)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html("Date: " + d3.timeFormat("%B %Y")(d.date) + "<br/>Price: $" + d.price.toFixed(2))
+                        .style("left", (event.pageX) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+        });
     </script>
 </body>
 </html>
