@@ -1,40 +1,76 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
+<html lang="en">
 <head>
-    <title>House Prices Over Time in Chapel Hill</title>
-    <script src="https://d3js.org/d3.v6.js"></script>
+    <meta charset="UTF-8">
+    <title>Prices Over Time</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 2px;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 60px;
+            height: 28px;
+            padding: 2px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
-<h1>House Prices Over Time in Chapel Hill</h1>
 <div id="chart"></div>
 
 <script>
-    // Define dimensions and margins for the chart
-    const margin = {top: 20, right: 30, bottom: 40, left: 50},
-          width = 960 - margin.left - margin.right,
-          height = 500 - margin.top - margin.bottom;
+    // Set the dimensions and margins of the graph
+    const margin = {top: 10, right: 30, bottom: 30, left: 60},
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
 
-    // Append SVG object to the body of the page
-    const svg = d3.select("#chart").append("svg")
+    // Append the svg object to the body of the page
+    const svg = d3.select("#chart")
+      .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
       .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Load and process the data
+    // Read the data from the CSV file
     d3.csv("zillow_data_chapel_hill.csv", function(d) {
-        const yearBuilt = d3.timeParse("%Y")(d.yearBuilt);
-        const price = +d.price;
-        if(yearBuilt && !isNaN(price) && price > 0) { // More explicit check
-            return { yearBuilt: yearBuilt, price: price };
-        }
+        return { date : d3.timeParse("%Y-%m-%d")(d.dateSoldString), price : d.price }
     }).then(function(data) {
-        data = data.filter(d => d !== undefined); // Filter out undefined rows
 
-        console.log("Filtered Data:", data); // Debugging: log filtered data
+        // Add X axis --> it is a date format
+        const x = d3.scaleTime()
+          .domain(d3.extent(data, function(d) { return d.date; }))
+          .range([ 0, width ]);
+        svg.append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x));
 
-        // Continue with data processing and plotting as before...
-        // [The rest of the code remains unchanged]
+        // Add Y axis
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(data, function(d) { return +d.price; })])
+          .range([ height, 0 ]);
+        svg.append("g")
+          .call(d3.axisLeft(y));
+
+        // Add the line
+        svg.append("path")
+          .datum(data)
+          .attr("fill", "none")
+          .attr("stroke", "steelblue")
+          .attr("stroke-width", 1.5)
+          .attr("d", d3.line()
+            .x(function(d) { return x(d.date) })
+            .y(function(d) { return y(d.price) })
+          )
     });
 </script>
 </body>
