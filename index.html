@@ -33,15 +33,6 @@
         .axis-label {
             font-size: 14px;
         }
-
-        .axis line,
-        .axis path {
-            stroke: black;
-        }
-
-        .axis text {
-            font-size: 12px;
-        }
     </style>
 </head>
 <body>
@@ -49,16 +40,17 @@
     <div class="tooltip"></div>
 
     <script>
-        const data = [{"year":1964.0,"price":524500.0},{"year":1965.0,"price":402775.0}, ...,{"year":2023.0,"price":598876.6732673268}];
+        const data = [{"year":1964.0,"price":524500.0},{"year":1965.0,"price":402775.0},{"year":1966.0,"price":556300.0},{"year":1967.0,"price":464900.0},{"year":1968.0,"price":388500.0},{"year":1969.0,"price":528150.0},{"year":1970.0,"price":563600.0},{"year":1971.0,"price":618100.0},{"year":1972.0,"price":614650.0},{"year":1973.0,"price":554327.2727272727},{"year":1974.0,"price":543900.0},{"year":1975.0,"price":627933.3333333334},{"year":1976.0,"price":510450.0},{"year":1977.0,"price":482600.0},{"year":1978.0,"price":496933.3333333333},{"year":1979.0,"price":506344.4444444444},{"year":1980.0,"price":513163.6363636364},{"year":1981.0,"price":620300.0},{"year":1983.0,"price":555766.6666666666},{"year":1984.0,"price":571441.1764705882},{"year":1985.0,"price":627625.0},{"year":1986.0,"price":578334.7826086957},{"year":1987.0,"price":605793.75},{"year":1988.0,"price":590623.9130434783},{"year":1989.0,"price":513160.0},{"year":1990.0,"price":638495.5555555555},{"year":1991.0,"price":632100.0},{"year":1992.0,"price":618778.2608695652},{"year":1993.0,"price":688729.8245614035},{"year":1994.0,"price":617810.6060606061},{"year":1995.0,"price":627193.4426229508},{"year":1996.0,"price":634332.4675324676},{"year":1997.0,"price":614673.3247863248},{"year":1998.0,"price":616471.0810810811},{"year":1999.0,"price":661170.7941176471},{"year":2000.0,"price":654988.8670520231},{"year":2001.0,"price":679487.3938356164},{"year":2002.0,"price":657145.0150943396},{"year":2003.0,"price":646043.8908450705},{"year":2004.0,"price":691686.0854700855},{"year":2005.0,"price":710091.6387434555},{"year":2006.0,"price":702916.3883792049},{"year":2007.0,"price":780403.6932515338},{"year":2008.0,"price":677402.734375},{"year":2009.0,"price":665634.3461538461},{"year":2010.0,"price":649294.5909090909},{"year":2011.0,"price":713924.1482649843},{"year":2012.0,"price":693431.1881188119},{"year":2013.0,"price":690627.3955375253},{"year":2014.0,"price":729760.8935281837},{"year":2015.0,"price":694941.9032815199},{"year":2016.0,"price":717548.7380585516},{"year":2017.0,"price":698806.4504249291},{"year":2018.0,"price":665398.8805620609},{"year":2019.0,"price":664733.1786163521},{"year":2020.0,"price":537791.8221436985},{"year":2021.0,"price":582267.6246334311},{"year":2022.0,"price":665967.9479418886},{"year":2023.0,"price":598876.6732673268}];
 
-        const margin = {top: 20, right: 20, bottom: 50, left: 60}, // Adjusted margins
+        const margin = {top: 20, right: 30, bottom: 30, left: 100},
               width = 800 - margin.left - margin.right,
               height = 500 - margin.top - margin.bottom;
 
         const svg = d3.select("svg")
                       .attr("viewBox", `0 0 800 500`)
                       .append("g")
-                      .attr("transform", `translate(${margin.left}, ${margin.top})`);
+                      .attr("transform",
+                            "translate(" + margin.left + "," + margin.top + ")");
 
         const x = d3.scaleLinear()
                     .domain(d3.extent(data, d => d.year))
@@ -69,23 +61,11 @@
                     .range([height, 0]);
 
         svg.append("g")
-           .attr("transform", `translate(0, ${height})`)
-           .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-           .selectAll("text")
-           .style("text-anchor", "end")
-           .attr("dx", "-.8em")
-           .attr("dy", ".15em")
-           .attr("transform", "rotate(-65)"); // Rotate the text for better spacing
+           .attr("transform", "translate(0," + height + ")")
+           .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
         svg.append("g")
-           .call(d3.axisLeft(y))
-           .append("text")
-           .attr("fill", "#000")
-           .attr("transform", "rotate(-90)")
-           .attr("y", 6)
-           .attr("dy", "0.71em")
-           .attr("text-anchor", "end")
-           .text("Price ($)");
+           .call(d3.axisLeft(y));
 
         svg.append("path")
            .datum(data)
@@ -98,7 +78,7 @@
         svg.append("text")
            .attr("class", "axis-label")
            .attr("text-anchor", "end")
-           .attr("x", width / 2)
+           .attr("x", width/2)
            .attr("y", height + margin.top + 20)
            .text("Year");
 
@@ -107,7 +87,7 @@
            .attr("text-anchor", "end")
            .attr("transform", "rotate(-90)")
            .attr("y", -margin.left + 20)
-           .attr("x", -margin.top - height / 2 + 20)
+           .attr("x", -margin.top - height/2 + 20)
            .text("Average Price ($)");
 
         const tooltip = d3.select(".tooltip");
@@ -124,8 +104,8 @@
                       .duration(200)
                       .style("opacity", .9);
                tooltip.html(`Year: ${d.year}<br/>Avg Price: $${Math.round(d.price)}`)
-                      .style("left", `${event.pageX}px`)
-                      .style("top", `${event.pageY - 28}px`);
+                      .style("left", (event.pageX) + "px")
+                      .style("top", (event.pageY - 28) + "px");
            })
            .on("mouseout", d => {
                tooltip.transition()
