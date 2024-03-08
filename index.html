@@ -80,15 +80,15 @@
            .attr("class", "axis-label")
            .attr("text-anchor", "end")
            .attr("x", width/2)
-           .attr("y", height + margin.top + 20)
+           .attr("y", height + margin.top)
            .text("Year");
 
         svg.append("text")
            .attr("class", "axis-label")
            .attr("text-anchor", "end")
            .attr("transform", "rotate(-90)")
-           .attr("y", -margin.left)
-           .attr("x", -margin.top - height/2 + 20)
+           .attr("y", -margin.left + 20)
+           .attr("x", -margin.top - height/2)
            .text("Average Price ($)");
 
         const tooltip = d3.select(".tooltip");
