@@ -87,8 +87,8 @@
            .attr("class", "axis-label")
            .attr("text-anchor", "end")
            .attr("transform", "rotate(-90)")
-           .attr("y", -margin.left)
-           .attr("x", height/2 + 20)
+           .attr("y", -margin.left + 50)
+           .attr("x", height/2)
            .text("Average Price ($)");
 
         const tooltip = d3.select(".tooltip");
