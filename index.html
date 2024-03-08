@@ -1,191 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Average House Prices Over Time</title>
+    <title>House Price Trends</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
-        .line {
-            fill: none;
-            stroke: steelblue;
-            stroke-width: 2;
-        }
+        .line { fill: none; stroke: steelblue; stroke-width: 2; }
         .tooltip {
             position: absolute;
             text-align: center;
-            width: 200px;
-            height: auto;
+            width: 120px;
+            height: 28px;
             padding: 2px;
             font: 12px sans-serif;
             background: lightsteelblue;
             border: 0px;
             border-radius: 8px;
             pointer-events: none;
-            opacity: 0;
-        }
-        .axis path,
-        .axis line {
-            fill: none;
-            stroke: black;
-            stroke-width: 1;
-        }
-        .axis text {
-            font-family: sans-serif;
-            font-size: 12px;
         }
     </style>
 </head>
 <body>
-    <svg width="1000" height="600"></svg>
-    <div class="tooltip"></div>
-    <script>
-        const svg = d3.select("svg"),
-            margin = {top: 20, right: 20, bottom: 110, left: 40},
-            margin2 = {top: 530, right: 20, bottom: 30, left: 40},
-            width = +svg.attr("width") - margin.left - margin.right,
-            height = +svg.attr("height") - margin.top - margin.bottom,
-            height2 = +svg.attr("height") - margin2.top - margin2.bottom;
 
-        const x = d3.scaleTime().range([0, width]),
-              x2 = d3.scaleTime().range([0, width]),
-              y = d3.scaleLinear().range([height, 0]),
-              y2 = d3.scaleLinear().range([height2, 0]);
+<svg width="600" height="400"></svg>
 
-        const xAxis = d3.axisBottom(x),
-              xAxis2 = d3.axisBottom(x2),
-              yAxis = d3.axisLeft(y);
+<script>
+    // Sample data - replace this with your actual data
+    var data = [
+        {year: 2014, price: 729760.89},
+        {year: 2015, price: 694941.90},
+        {year: 2016, price: 717548.74},
+        {year: 2017, price: 698806.45},
+        {year: 2018, price: 665398.88},
+        {year: 2019, price: 664733.18},
+        {year: 2020, price: 537791.82},
+        {year: 2021, price: 582267.62},
+        {year: 2022, price: 665967.95},
+        {year: 2023, price: 598876.67}
+    ];
 
-        const brush = d3.brushX()
-            .extent([[0, 0], [width, height2]])
-            .on("brush end", brushed);
+    var svg = d3.select("svg"),
+        margin = {top: 20, right: 20, bottom: 30, left: 50},
+        width = +svg.attr("width") - margin.left - margin.right,
+        height = +svg.attr("height") - margin.top - margin.bottom,
+        g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        const zoom = d3.zoom()
-            .scaleExtent([1, Infinity])
-            .translateExtent([[0, 0], [width, height]])
-            .extent([[0, 0], [width, height]])
-            .on("zoom", zoomed);
+    var x = d3.scaleLinear().rangeRound([0, width]),
+        y = d3.scaleLinear().rangeRound([height, 0]);
 
-        const line = d3.line()
-            .x(function(d) { return x(d.date); })
-            .y(function(d) { return y(d.price); });
+    var line = d3.line()
+        .x(function(d) { return x(d.year); })
+        .y(function(d) { return y(d.price); });
 
-        const line2 = d3.line()
-            .x(function(d) { return x2(d.date); })
-            .y(function(d) { return y2(d.price); });
+    x.domain(d3.extent(data, function(d) { return d.year; }));
+    y.domain(d3.extent(data, function(d) { return d.price; }));
 
-        const clip = svg.append("defs").append("svg:clipPath")
-            .attr("id", "clip")
-            .append("svg:rect")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("x", 0)
-            .attr("y", 0); 
+    g.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x).ticks(data.length).tickFormat(d3.format("d")))
+        .select(".domain")
+        .remove();
 
-        const Line_chart = svg.append("g")
-            .attr("class", "focus")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-            .attr("clip-path", "url(#clip)");
+    g.append("g")
+        .call(d3.axisLeft(y))
+        .append("text")
+        .attr("fill", "#000")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text("Price ($)");
 
-        const focus = svg.append("g")
-            .attr("class", "focus")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    g.append("path")
+        .datum(data)
+        .attr("class", "line")
+        .attr("d", line);
 
-        const context = svg.append("g")
-            .attr("class", "context")
-            .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+    // Tooltip
+    var tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
 
-        const tooltip = d3.select(".tooltip");
-
-        d3.csv("zillow_data_chapel_hill.csv", function(d) {
-            return { date: d3.timeParse("%Y-%m-%d")(d.dateSold), price: d.price };
-        }).then(function(data) {
-            const dataSummarized = d3.rollups(data, v => d3.mean(v, d => d.price), d => d3.timeYear(d.date))
-                                      .map(([date, price]) => ({date, price}))
-                                      .filter(d => d.date >= d3.timeYear.offset(d3.max(data, d => d.date), -10)); // Last 10 years
-
-            x.domain(d3.extent(dataSummarized, function(d) { return d.date; }));
-            y.domain([0, d3.max(dataSummarized, function(d) { return d.price; })]);
-            x2.domain(x.domain());
-            y2.domain(y.domain());
-
-            focus.append("path")
-                .datum(dataSummarized)
-                .attr("class", "line")
-                .attr("d", line);
-
-            focus.append("g")
-                .attr("class", "axis axis--x")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis);
-
-            focus.append("g")
-                .attr("class", "axis axis--y")
-                .call(yAxis);
-
-            // Tooltip interaction
-            focus.selectAll(".dot")
-                .data(dataSummarized)
-                .enter().append("circle")
-                .attr("class", "dot")
-                .attr("cx", function(d) { return x(d.date); })
-                .attr("cy", function(d) { return y(d.price); })
-                .attr("r", 5)
-                .on("mouseover", function(event, d) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style("opacity", .9);
-                    tooltip.html("Date: " + d3.timeFormat("%B %Y")(d.date) + "<br/>Avg Price: $" + d.price.toFixed(2))
-                        .style("left", (event.pageX) + "px")
-                        .style("top", (event.pageY - 28) + "px");
-                })
-                .on("mouseout", function(d) {
-                    tooltip.transition()
-                        .duration(500)
-                        .style("opacity", 0);
-                });
-
-            context.append("path")
-                .datum(dataSummarized)
-                .attr("class", "line")
-                .attr("d", line2);
-
-            context.append("g")
-                .attr("class", "axis axis--x")
-                .attr("transform", "translate(0," + height2 + ")")
-                .call(xAxis2);
-
-            context.append("g")
-                .attr("class", "brush")
-                .call(brush)
-                .call(brush.move, x.range());
-
-            svg.append("rect")
-                .attr("class", "zoom")
-                .attr("width", width)
-                .attr("height", height)
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-                .call(zoom);
+    svg.selectAll("dot")
+        .data(data)
+      .enter().append("circle")
+        .attr("r", 5)
+        .attr("cx", function(d) { return x(d.year) + margin.left; })
+        .attr("cy", function(d) { return y(d.price) + margin.top; })
+        .on("mouseover", function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html("Year: " + d.year + "<br/>" + "Price: $" + d.price)
+                .style("left", (event.pageX + 5) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
         });
+</script>
 
-        function brushed(event) {
-            if (event.sourceEvent && event.sourceEvent.type === "zoom") return; // ignore brush-by-zoom
-            var s = event.selection || x2.range();
-            x.domain(s.map(x2.invert, x2));
-            focus.select(".line").attr("d", line);
-            focus.select(".axis--x").call(xAxis);
-            svg.select(".zoom").call(zoom.transform, d3.zoomIdentity
-                .scale(width / (s[1] - s[0]))
-                .translate(-s[0], 0));
-        }
-
-        function zoomed(event) {
-            if (event.sourceEvent && event.sourceEvent.type === "brush") return; // ignore zoom-by-brush
-            var t = event.transform;
-            x.domain(t.rescaleX(x2).domain());
-            focus.select(".line").attr("d", line);
-            focus.select(".axis--x").call(xAxis);
-            context.select(".brush").call(brush.move, x.range().map(t.invertX, t));
-        }
-    </script>
 </body>
 </html>
