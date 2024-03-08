@@ -1,76 +1,65 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-<title>Chapel Hill Real Estate Analysis</title>
-<script src="https://d3js.org/d3.v6.js"></script>
-<style>
-  .dot {
-    fill: steelblue;
-    opacity: 0.6;
-  }
-  .tooltip {
-    background-color: #f9f9f9;
-    border: 1px solid #d3d3d3;
-    border-radius: 5px;
-    padding: 5px;
-  }
-</style>
+    <title>House Prices Over Time in Chapel Hill</title>
+    <script src="https://d3js.org/d3.v6.js"></script>
 </head>
 <body>
-<h1>Chapel Hill Real Estate Price vs. Year Built</h1>
-<div id="scatterplot"></div>
+<h1>Interactive Line Chart: House Prices Over Time in Chapel Hill</h1>
+<div id="chart"></div>
 
 <script>
-const margin = {top: 10, right: 30, bottom: 40, left: 60},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    // Define dimensions and margins for the chart
+    const margin = {top: 20, right: 30, bottom: 40, left: 50},
+          width = 960 - margin.left - margin.right,
+          height = 500 - margin.top - margin.bottom;
 
-const svg = d3.select("#scatterplot")
-  .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+    // Append SVG object to the body of the page
+    const svg = d3.select("#chart").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
-d3.json("zillow_data_cleaned.json").then(data => {
-  const x = d3.scaleLinear()
-    .domain(d3.extent(data, d => d.yearBuilt))
-    .range([0, width]);
-  svg.append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x));
+    // Load and process the data
+    d3.csv("zillow_data_chapel_hill.csv", function(d) {
+        return { yearBuilt: d3.timeParse("%Y")(d.yearBuilt), price: d.price };
+    }).then(function(data) {
+        // Group data by yearBuilt and calculate average price
+        let summary = Array.from(d3.group(data, d => d.yearBuilt), ([key, value]) => ({
+            yearBuilt: key,
+            price: d3.mean(value, d => +d.price)
+        }));
 
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d.price)])
-    .range([height, 0]);
-  svg.append("g")
-    .call(d3.axisLeft(y));
+        // Sort data by yearBuilt
+        summary.sort((a, b) => d3.ascending(a.yearBuilt, b.yearBuilt));
 
-  svg.append("g")
-    .selectAll("dot")
-    .data(data)
-    .join("circle")
-      .attr("class", "dot")
-      .attr("cx", d => x(d.yearBuilt))
-      .attr("cy", d => y(d.price))
-      .attr("r", 5)
-      .on("mouseover", function(event, d) {
-        d3.select(this).transition().duration(100).attr("r", 8);
-        tooltip.style("visibility", "visible").text(`Year: ${d.yearBuilt}, Price: $${d.price}`);
-      })
-      .on("mousemove", function(event) {
-        tooltip.style("top", (event.pageY - 10) + "px").style("left",(event.pageX + 10) + "px");
-      })
-      .on("mouseout", function() {
-        d3.select(this).transition().duration(100).attr("r", 5);
-        tooltip.style("visibility", "hidden");
-      });
+        // Add X axis --> it is a date format
+        const x = d3.scaleTime()
+          .domain(d3.extent(summary, function(d) { return d.yearBuilt; }))
+          .range([ 0, width ]);
+        svg.append("g")
+          .attr("transform", `translate(0, ${height})`)
+          .call(d3.axisBottom(x));
 
-  const tooltip = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("position", "absolute")
-    .style("visibility", "hidden");
-});
+        // Add Y axis
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(summary, function(d) { return +d.price; })])
+          .range([ height, 0 ]);
+        svg.append("g")
+          .call(d3.axisLeft(y));
+
+        // Add the line
+        svg.append("path")
+          .datum(summary)
+          .attr("fill", "none")
+          .attr("stroke", "steelblue")
+          .attr("stroke-width", 1.5)
+          .attr("d", d3.line()
+            .x(function(d) { return x(d.yearBuilt) })
+            .y(function(d) { return y(d.price) })
+            )
+    });
 </script>
 </body>
 </html>
