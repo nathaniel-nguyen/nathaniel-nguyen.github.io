@@ -22,7 +22,7 @@
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Load and process the data
-    d3.csv("./zillow_data_chapel_hill.csv", function(d) {
+    d3.csv("zillow_data_chapel_hill.csv", function(d) {
         if(d.yearBuilt && d.price) { // Ensure the row has valid yearBuilt and price
             return { yearBuilt: d3.timeParse("%Y")(d.yearBuilt), price: +d.price };
         }
