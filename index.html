@@ -1,63 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Prices Over Time</title>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <title>Chapel Hill House Prices Over Time</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        .line {
-            fill: none;
-            stroke: steelblue;
-            stroke-width: 2px;
+        .axis-label {
+            font: 12px sans-serif;
         }
+
         .tooltip {
             position: absolute;
             text-align: center;
-            width: 60px;
-            height: 28px;
+            width: auto;
+            height: auto;
             padding: 2px;
             font: 12px sans-serif;
             background: lightsteelblue;
-            border: 0px;
+            border: 0;
             border-radius: 8px;
             pointer-events: none;
+            opacity: 0;
+        }
+
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 2;
         }
     </style>
 </head>
 <body>
-<div id="chart"></div>
+
+<svg width="800" height="600"></svg>
 
 <script>
     // Set the dimensions and margins of the graph
-    const margin = {top: 10, right: 30, bottom: 30, left: 60},
-        width = 960 - margin.left - margin.right,
-        height = 500 - margin.top - margin.bottom;
+    var margin = {top: 20, right: 20, bottom: 30, left: 50},
+        width = 800 - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom;
 
     // Append the svg object to the body of the page
-    const svg = d3.select("#chart")
-      .append("svg")
+    var svg = d3.select("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
       .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     // Read the data from the CSV file
     d3.csv("zillow_data_chapel_hill.csv", function(d) {
-        return { date : d3.timeParse("%Y-%m-%d")(d.dateSoldString), price : d.price }
+        if (+d.price <= 2000000) {
+            return {
+                date: d3.timeParse("%Y-%m-%d")(d.dateSoldString),
+                price: +d.price
+            };
+        }
     }).then(function(data) {
+        if (!data) return; // Skip if no data
+
+        // Filter undefined entries due to parsing
+        data = data.filter(d => d !== undefined);
 
         // Add X axis --> it is a date format
-        const x = d3.scaleTime()
+        var x = d3.scaleTime()
           .domain(d3.extent(data, function(d) { return d.date; }))
           .range([ 0, width ]);
         svg.append("g")
-          .attr("transform", `translate(0,${height})`)
+          .attr("transform", "translate(0," + height + ")")
           .call(d3.axisBottom(x));
 
         // Add Y axis
-        const y = d3.scaleLinear()
+        var y = d3.scaleLinear()
           .domain([0, d3.max(data, function(d) { return +d.price; })])
-          .range([ height, 0 ]);
+          .range([ height, 0]);
         svg.append("g")
           .call(d3.axisLeft(y));
 
@@ -70,7 +84,7 @@
           .attr("d", d3.line()
             .x(function(d) { return x(d.date) })
             .y(function(d) { return y(d.price) })
-          )
+          );
     });
 </script>
 </body>
