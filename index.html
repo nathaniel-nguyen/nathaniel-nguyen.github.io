@@ -22,13 +22,18 @@
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Load and process the data
-    d3.csv("zillow_data_chapel_hill.csv", function(d) {
-        return { yearBuilt: d3.timeParse("%Y")(d.yearBuilt), price: d.price };
+    d3.csv("./zillow_data_chapel_hill.csv", function(d) {
+        if(d.yearBuilt && d.price) { // Ensure the row has valid yearBuilt and price
+            return { yearBuilt: d3.timeParse("%Y")(d.yearBuilt), price: +d.price };
+        }
     }).then(function(data) {
+        // Filter out undefined rows after parsing
+        data = data.filter(d => d !== undefined);
+
         // Group data by yearBuilt and calculate average price
         let summary = Array.from(d3.group(data, d => d.yearBuilt), ([key, value]) => ({
             yearBuilt: key,
-            price: d3.mean(value, d => +d.price)
+            price: d3.mean(value, d => d.price)
         }));
 
         // Sort data by yearBuilt
