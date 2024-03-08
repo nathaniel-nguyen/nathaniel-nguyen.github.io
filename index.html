@@ -1,91 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Chapel Hill House Prices Over Time</title>
+    <title>House Prices Over Time</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        .axis-label {
-            font: 12px sans-serif;
-        }
-
-        .tooltip {
+        .line {{
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 2;
+        }}
+        .tooltip {{
             position: absolute;
             text-align: center;
-            width: auto;
+            width: 100px;
             height: auto;
             padding: 2px;
             font: 12px sans-serif;
             background: lightsteelblue;
-            border: 0;
+            border: 0px;
             border-radius: 8px;
             pointer-events: none;
             opacity: 0;
-        }
-
-        .line {
-            fill: none;
-            stroke: steelblue;
-            stroke-width: 2;
-        }
+        }}
     </style>
 </head>
 <body>
+    <svg width="960" height="500"></svg>
+    <div class="tooltip"></div>
+    <script>
+        const data = {data_json};
 
-<svg width="800" height="600"></svg>
+        const margin = {{top: 20, right: 20, bottom: 30, left: 50}},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
 
-<script>
-    // Set the dimensions and margins of the graph
-    var margin = {top: 20, right: 20, bottom: 30, left: 50},
-        width = 800 - margin.left - margin.right,
-        height = 600 - margin.top - margin.bottom;
+        const svg = d3.select("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    // Append the svg object to the body of the page
-    var svg = d3.select("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        const x = d3.scaleTime()
+            .domain(d3.extent(data, d => d3.timeParse("%Y-%m")(d.year_month)))
+            .range([0, width]);
 
-    // Read the data from the CSV file
-    d3.csv("zillow_data_chapel_hill.csv", function(d) {
-        if (+d.price <= 2000000) {
-            return {
-                date: d3.timeParse("%Y-%m-%d")(d.dateSoldString),
-                price: +d.price
-            };
-        }
-    }).then(function(data) {
-        if (!data) return; // Skip if no data
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.price)])
+            .range([height, 0]);
 
-        // Filter undefined entries due to parsing
-        data = data.filter(d => d !== undefined);
+        const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%Y-%m"));
+        const yAxis = d3.axisLeft(y);
 
-        // Add X axis --> it is a date format
-        var x = d3.scaleTime()
-          .domain(d3.extent(data, function(d) { return d.date; }))
-          .range([ 0, width ]);
         svg.append("g")
-          .attr("transform", "translate(0," + height + ")")
-          .call(d3.axisBottom(x));
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
 
-        // Add Y axis
-        var y = d3.scaleLinear()
-          .domain([0, d3.max(data, function(d) { return +d.price; })])
-          .range([ height, 0]);
         svg.append("g")
-          .call(d3.axisLeft(y));
+            .call(yAxis);
 
-        // Add the line
+        const line = d3.line()
+            .x(d => x(d3.timeParse("%Y-%m")(d.year_month)))
+            .y(d => y(d.price));
+
         svg.append("path")
-          .datum(data)
-          .attr("fill", "none")
-          .attr("stroke", "steelblue")
-          .attr("stroke-width", 1.5)
-          .attr("d", d3.line()
-            .x(function(d) { return x(d.date) })
-            .y(function(d) { return y(d.price) })
-          );
-    });
-</script>
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line);
+
+        // Tooltip
+        const tooltip = d3.select(".tooltip");
+
+        svg.selectAll("dot")
+            .data(data)
+          .enter().append("circle")
+            .attr("r", 5)
+            .attr("cx", d => x(d3.timeParse("%Y-%m")(d.year_month)))
+            .attr("cy", d => y(d.price))
+            .on("mouseover", (event, d) => {{
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(d.year_month + "<br/>" + "$" + d.price.toFixed(2))
+                    .style("left", (event.pageX) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            }})
+            .on("mouseout", d => {{
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            }});
+    </script>
 </body>
 </html>
