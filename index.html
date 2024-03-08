@@ -95,7 +95,7 @@
            .attr("text-anchor", "end")
            .attr("transform", "rotate(-90)")
            .attr("y", -margin.left + 20)
-           .attr("x", -margin.top - height/2 + 70)
+           .attr("x", -margin.top - height/2 + 150)
            .text("Profit from Average Price of Home ($)");
 
         const tooltip = d3.select(".tooltip");
@@ -111,7 +111,7 @@
                tooltip.transition()
                       .duration(200)
                       .style("opacity", .9);
-               tooltip.html(`Year: ${d.year}<br/>Avg Price: $${Math.round(d.price)}`)
+               tooltip.html(`Year: ${d.year}<br/>Profit: $${Math.round(d.price)}`)
                       .style("left", (event.pageX) + "px")
                       .style("top", (event.pageY - 28) + "px");
            })
